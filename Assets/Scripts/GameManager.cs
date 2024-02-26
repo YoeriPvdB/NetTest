@@ -5,9 +5,19 @@ using Unity.Netcode;
 
 public class GameManager : NetworkBehaviour
 {
-    private IEnumerator cdCoroutine;
+    
 
-    public Dictionary<int,GameObject> players = new Dictionary<int,GameObject>();
+    public enum Status
+    {
+        Standby,
+        Choosing,
+        Acting
+    }
+
+    public Status status;
+
+    GameObject player;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -19,39 +29,31 @@ public class GameManager : NetworkBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+        if(status == Status.Acting)
+        {
+            //Debug.Log("we are acting");
+            MovePlayerRpc();
+        }
+    }
+
+    [Rpc(SendTo.Everyone)]
+    void MovePlayerRpc()
+    {
+        player.transform.position = Vector2.Lerp(player.transform.position, new Vector2(0, -1f), 0.01f);
+
+        if (Vector2.Distance(player.transform.position, new Vector2(0, -1f)) < 0.1f)
+        {
+            status = Status.Standby;
+        }
+    }
+
+    public void GetPlayer(GameObject playerGO)
+    {
+        player = playerGO;
     }
 
     
-    public void AddPlayersRpc(GameObject pObject) 
-    {
-        Debug.Log("checking to add");
-        Debug.Log(pObject);
-        players.Add(players.Count+1, pObject);
-        Debug.Log("added");
-        if (players.Count == 2)
-        {
-            Debug.Log("full lobby ");
-            StartCD(2f);
-        }
-        
-    }
-
-    public void StartCD(float timer)
-    {
-        cdCoroutine = BreakCooldownRpc(timer);
-        StartCoroutine(cdCoroutine);
-    }
-
-    IEnumerator BreakCooldownRpc(float cdTimer)
-    {
-        Debug.Log("waiting");
-        yield return new WaitForSeconds(cdTimer);
-
-        
-        //pAction.canMove = true;
-        Debug.Log("moving");
-    }
+    
 
     
 }

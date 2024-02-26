@@ -20,7 +20,16 @@ public class PlayerAction : NetworkBehaviour
         Feint
     }
 
+    enum Status
+    {
+        Standby,
+        Choosing,
+        Acting
+    }
+
     Action playerChoice;
+
+    Status status;
 
     Dictionary<KeyCode, Action> inputCheck = new Dictionary<KeyCode, Action>()
     {
@@ -41,17 +50,18 @@ public class PlayerAction : NetworkBehaviour
     void Start()
     {
         gm = GameObject.FindGameObjectWithTag("GameManager").GetComponent<GameManager>();
-
+        gm.GetPlayer(gameObject);
         id = (int)NetworkObjectId;
 
-        health = 5; 
+        health = 5;
+        status = Status.Standby;
 
         if(IsHost)
         {
-            transform.position = new Vector2(-5f, -1f);
+            transform.position = new Vector2(-2f, -1f);
         } else
         {
-            transform.position = new Vector2(5f, -1f);
+            transform.position = new Vector2(2f, -1f);
         }
 
     }
@@ -71,32 +81,61 @@ public class PlayerAction : NetworkBehaviour
         {
             canAct = true;
             CallCooldownRpc();
+            StartMoveRpc();
         }
 
         if(canAct)
         {
-            /*if (Input.GetKeyDown(KeyCode.Space))
+            if (Input.GetKeyDown(KeyCode.UpArrow))
             {
                 playerChoice = Action.Attack;
             }
 
-            if (Input.GetKeyDown(KeyCode.V))
+            if (Input.GetKeyDown(KeyCode.LeftArrow))
             {
                 playerChoice = Action.Block;
             }
 
-            if (Input.GetKeyDown(KeyCode.B))
+            if (Input.GetKeyDown(KeyCode.RightArrow))
             {
                 playerChoice = Action.Feint;
-            }*/
-
-            if(Input.anyKeyDown)
-            {
-                Debug.Log(Event.current.keyCode);
-               // playerChoice = inputCheck[Event.current.keyCode];
             }
+
+
         }
 
+
+        switch (status) 
+        {
+            case Status.Standby:
+                break;
+            case Status.Choosing:
+                break;
+            case Status.Acting:
+                MoveToOpp();
+                break;
+        }
+
+
+
+
+    }
+
+
+    [Rpc(SendTo.Everyone)]
+    void StartMoveRpc()
+    {
+        gm.status = GameManager.Status.Acting;
+    }
+
+    void MoveToOpp()
+    {
+        transform.position = Vector2.Lerp(transform.position, new Vector2(0, -1f), 0.01f);
+
+        if(Vector2.Distance(transform.position, new Vector2(0,-1f)) < 0.1f )
+        {
+            status = Status.Standby;
+        }
     }
 
     [Rpc(SendTo.Server)]
@@ -135,6 +174,10 @@ public class PlayerAction : NetworkBehaviour
         {
             CheckForWinnerServerRpc(playerChoice);
         }
+
+        yield return new WaitForSeconds(2f);
+
+        canAct = true;
         
     }
 
