@@ -25,6 +25,8 @@ public class RpcTest : NetworkBehaviour
         
     }
 
+    
+
     public override void OnNetworkSpawn()
     {
         if (!IsServer && IsOwner) //Only send an RPC to the server on the client that owns the NetworkObject that owns this NetworkBehaviour instance
@@ -57,19 +59,16 @@ public class RpcTest : NetworkBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.F))
+        if (Input.GetKeyDown(KeyCode.F) && IsOwner)
         {
             TestMoveRpc();
         }
     }
 
-    [Rpc(SendTo.NotServer)]
+    [Rpc(SendTo.ClientsAndHost)]
     void TestMoveRpc()
     {
-        if(NetworkObjectId == 2)
-        {
-            gameObject.GetComponent<Transform>().position = new Vector2(0, 0);
-        }        
-        
+        gameObject.GetComponent<Transform>().position = new Vector2(0, 0);
+
     }
 }
