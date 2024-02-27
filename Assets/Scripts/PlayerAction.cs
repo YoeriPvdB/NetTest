@@ -11,7 +11,11 @@ public class PlayerAction : NetworkBehaviour
     int id;
     [SerializeField] GameObject m_circle;
 
-    public int health; 
+    public int health;
+    float targetPosition;
+    float returnPosition;
+
+    UIController uiScript;
 
     enum Action
     {
@@ -20,16 +24,19 @@ public class PlayerAction : NetworkBehaviour
         Feint
     }
 
-    enum Status
+    public enum Status
     {
         Standby,
         Choosing,
         Acting
     }
 
+    //temmp
+    bool gaming; 
+
     Action playerChoice;
 
-    Status status;
+    public Status status;
 
     Dictionary<KeyCode, Action> inputCheck = new Dictionary<KeyCode, Action>()
     {
@@ -51,17 +58,22 @@ public class PlayerAction : NetworkBehaviour
     {
         gm = GameObject.FindGameObjectWithTag("GameManager").GetComponent<GameManager>();
         gm.GetPlayer(gameObject);
+        uiScript = GetComponent<UIController>();
         id = (int)NetworkObjectId;
 
         health = 5;
+        targetPosition = 0;
         status = Status.Standby;
+
 
         if(IsHost)
         {
             transform.position = new Vector2(-2f, -1f);
+            returnPosition = -2f;
         } else
         {
             transform.position = new Vector2(2f, -1f);
+            returnPosition = 2f;
         }
 
     }
@@ -69,19 +81,35 @@ public class PlayerAction : NetworkBehaviour
     // Update is called once per frame
     private void Update()
     {
-        
-        if(!IsOwner)
+
+        switch (status)
         {
-            return;
+            case Status.Standby:
+                break;
+            case Status.Choosing:
+                uiScript.ShowCountdown();
+                
+                break;
+            case Status.Acting:
+                MoveToOpp();
+                break;
         }
 
-        transform.Translate(new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")) * 0.1f);
-
-        if (Input.GetKeyDown(KeyCode.F))
+        /*if (!IsOwner)
         {
+            return;
+        }*/
+
+        //transform.Translate(new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")) * 0.1f);
+
+        if (Input.GetKeyDown(KeyCode.F) && !gaming)
+        {
+            targetPosition = 0;
+            
             canAct = true;
-            CallCooldownRpc();
-            StartMoveRpc();
+            gaming = true;
+            //CallCooldownRpc();
+            StartCountdownRpc();
         }
 
         if(canAct)
@@ -89,52 +117,61 @@ public class PlayerAction : NetworkBehaviour
             if (Input.GetKeyDown(KeyCode.UpArrow))
             {
                 playerChoice = Action.Attack;
+                //StartMoveRpc("attacking");
+                canAct = false;
             }
 
             if (Input.GetKeyDown(KeyCode.LeftArrow))
             {
                 playerChoice = Action.Block;
+                //StartMoveRpc("attacking");
+                canAct = false;
             }
 
             if (Input.GetKeyDown(KeyCode.RightArrow))
             {
                 playerChoice = Action.Feint;
+                //StartMoveRpc("attacking");
+                canAct = false;
             }
 
 
-        }
-
-
-        switch (status) 
-        {
-            case Status.Standby:
-                break;
-            case Status.Choosing:
-                break;
-            case Status.Acting:
-                MoveToOpp();
-                break;
-        }
-
-
-
+        }    
 
     }
 
 
     [Rpc(SendTo.Everyone)]
-    void StartMoveRpc()
+    public void StartMoveRpc(string command)
     {
-        gm.status = GameManager.Status.Acting;
+        status = Status.Acting;
+        
+    }
+
+    [Rpc(SendTo.Everyone)] 
+    void StartCountdownRpc()
+    {
+        status = Status.Choosing;
+    }
+
+    [Rpc(SendTo.NotServer)]
+    void StartMoveClientRpc(string command)
+    {
+        //Debug.Log(command);
+        status = Status.Acting;
     }
 
     void MoveToOpp()
     {
-        transform.position = Vector2.Lerp(transform.position, new Vector2(0, -1f), 0.01f);
+       
+        transform.position = Vector2.Lerp(transform.position, new Vector2(targetPosition, -1f), 0.3f);
 
-        if(Vector2.Distance(transform.position, new Vector2(0,-1f)) < 0.1f )
+        if(Vector2.Distance(transform.position, new Vector2(targetPosition,-1f)) < 0.1f)
         {
             status = Status.Standby;
+
+            StartCooldown();
+            
         }
     }
 
@@ -152,33 +189,67 @@ public class PlayerAction : NetworkBehaviour
 
     
 
-    [Rpc(SendTo.ClientsAndHost)]
-    void CallCooldownRpc()
+    [Rpc(SendTo.Server)]
+    void CallCooldownServerRpc()
     {
        
-        IEnumerator coroutine = CountdownRpc();
+        IEnumerator coroutine = Countdown();
+        StartCoroutine(coroutine);
+        //CallCooldownClientRpc();
+    }
+
+    [Rpc(SendTo.ClientsAndHost)]
+    void CallCooldownClientRpc()
+    {
+        IEnumerator coroutine = Countdown();
         StartCoroutine(coroutine);
     }
 
-    
-    IEnumerator CountdownRpc()
+    void StartCooldown()
     {
-        yield return new WaitForSeconds(2f);
-        canAct = false;
+        IEnumerator coroutine = Countdown();
+        StartCoroutine(coroutine);
+    }
+    IEnumerator Countdown()
+    {
+        yield return new WaitForSeconds(0.5f);
+
         //Debug.Log(playerChoice);
 
-        if(IsHost)
+        
+
+        if (Vector2.Distance(transform.position, new Vector2(0, -1f)) < 0.1f)
+        {
+            GetOutcome();
+            targetPosition = returnPosition;
+            //StartMoveRpc("returning");
+            status = Status.Acting;
+            //status = Status.Standby;
+        } else
+        {
+            targetPosition = 0;
+            yield return new WaitForSeconds(1f);
+
+            StartCountdownRpc();
+
+            canAct = true;
+        }
+
+
+        
+        
+    }
+
+    void GetOutcome()
+    {
+        if (IsHost)
         {
             CheckForWinnerClientRpc(playerChoice);
-        } else
+        }
+        else
         {
             CheckForWinnerServerRpc(playerChoice);
         }
-
-        yield return new WaitForSeconds(2f);
-
-        canAct = true;
-        
     }
 
     [Rpc(SendTo.Server)]
@@ -188,8 +259,9 @@ public class PlayerAction : NetworkBehaviour
         if(playerChoice == actionCheck[otherChoice])
         {
             health--;
+            uiScript.UpdateHealth(health);
         }
-        Debug.Log(health);
+        //Debug.Log(playerChoice);
     }
 
     [Rpc(SendTo.NotServer)]
@@ -200,8 +272,9 @@ public class PlayerAction : NetworkBehaviour
         if (playerChoice == actionCheck[otherChoice])
         {
             health--;
+            uiScript.UpdateHealth(health);
         }
-        Debug.Log(health);
+        //Debug.Log(playerChoice);
     }
 
 }

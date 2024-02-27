@@ -39,6 +39,8 @@ public class GameManager : NetworkBehaviour
     [Rpc(SendTo.Everyone)]
     void MovePlayerRpc()
     {
+        Debug.Log(player.GetComponent<NetworkObject>().NetworkObjectId + " is here");
+        player.GetComponent<PlayerAction>().status = PlayerAction.Status.Acting;
         player.transform.position = Vector2.Lerp(player.transform.position, new Vector2(0, -1f), 0.01f);
 
         if (Vector2.Distance(player.transform.position, new Vector2(0, -1f)) < 0.1f)
