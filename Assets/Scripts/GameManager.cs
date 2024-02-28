@@ -21,11 +21,23 @@ public class GameManager : NetworkBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        
-
+        // GameObject.FindGameObjectWithTag("Player").GetComponent<LobbyPlayer>().SetCorrectScriptsRpc();
+        SetupRpc();
 
     }
 
+    [Rpc(SendTo.NotServer)]
+    void SetupRpc()
+    {
+        GameObject.FindGameObjectWithTag("Player").GetComponent<PlayerAction>().enabled = true;
+        GameObject.FindGameObjectWithTag("Player").GetComponent<UIController>().enabled = true;
+        GameObject.FindGameObjectWithTag("Player").GetComponent<LobbyPlayer>().enabled = false;
+        Debug.Log(OwnerClientId + " switched stats");
+       // SetupClientRpc();
+    }
+
+  
+    
     // Update is called once per frame
     void Update()
     {

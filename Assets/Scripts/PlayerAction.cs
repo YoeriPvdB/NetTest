@@ -12,6 +12,7 @@ public class PlayerAction : NetworkBehaviour
     [SerializeField] GameObject m_circle;
 
     public int health;
+    float zoomDir;
     float targetPosition;
     float returnPosition;
 
@@ -19,6 +20,7 @@ public class PlayerAction : NetworkBehaviour
 
     enum Action
     {
+        
         Attack,
         Block,
         Feint
@@ -64,7 +66,7 @@ public class PlayerAction : NetworkBehaviour
         health = 5;
         targetPosition = 0;
         status = Status.Standby;
-
+        zoomDir = 3f;
 
         if(IsHost)
         {
@@ -76,6 +78,9 @@ public class PlayerAction : NetworkBehaviour
             returnPosition = 2f;
         }
 
+        /*if(IsOwner)
+        uiScript.EnableSlider(false);*/
+
     }
 
     // Update is called once per frame
@@ -85,58 +90,50 @@ public class PlayerAction : NetworkBehaviour
         switch (status)
         {
             case Status.Standby:
+                //uiScript.ZoomCamera(5f);
                 break;
+
             case Status.Choosing:
+
+                if (Input.GetKeyDown(KeyCode.UpArrow))
+                {
+                    playerChoice = Action.Attack;
+                    uiScript.HighlightActionChoice(2);
+                }
+
+                if (Input.GetKeyDown(KeyCode.LeftArrow))
+                {
+                    playerChoice = Action.Block;
+                    uiScript.HighlightActionChoice(1);
+                }
+
+                if (Input.GetKeyDown(KeyCode.RightArrow))
+                {
+                    playerChoice = Action.Feint;
+                    uiScript.HighlightActionChoice(3);
+                }
+
                 uiScript.ShowCountdown();
                 
                 break;
+
             case Status.Acting:
+                //uiScript.ZoomCamera(zoomDir);
                 MoveToOpp();
                 break;
         }
-
-        /*if (!IsOwner)
-        {
-            return;
-        }*/
-
-        //transform.Translate(new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")) * 0.1f);
 
         if (Input.GetKeyDown(KeyCode.F) && !gaming)
         {
             targetPosition = 0;
             
-            canAct = true;
+            
             gaming = true;
             //CallCooldownRpc();
             StartCountdownRpc();
         }
 
-        if(canAct)
-        {
-            if (Input.GetKeyDown(KeyCode.UpArrow))
-            {
-                playerChoice = Action.Attack;
-                //StartMoveRpc("attacking");
-                canAct = false;
-            }
-
-            if (Input.GetKeyDown(KeyCode.LeftArrow))
-            {
-                playerChoice = Action.Block;
-                //StartMoveRpc("attacking");
-                canAct = false;
-            }
-
-            if (Input.GetKeyDown(KeyCode.RightArrow))
-            {
-                playerChoice = Action.Feint;
-                //StartMoveRpc("attacking");
-                canAct = false;
-            }
-
-
-        }    
+         
 
     }
 
@@ -151,20 +148,17 @@ public class PlayerAction : NetworkBehaviour
     [Rpc(SendTo.Everyone)] 
     void StartCountdownRpc()
     {
+        uiScript.EnableSlider(true);
+        zoomDir = 3;
         status = Status.Choosing;
     }
 
-    [Rpc(SendTo.NotServer)]
-    void StartMoveClientRpc(string command)
-    {
-        //Debug.Log(command);
-        status = Status.Acting;
-    }
+    
 
     void MoveToOpp()
     {
        
-        transform.position = Vector2.Lerp(transform.position, new Vector2(targetPosition, -1f), 0.3f);
+        transform.position = Vector2.MoveTowards(transform.position, new Vector2(targetPosition, -1f), Time.deltaTime * 60f);
 
         if(Vector2.Distance(transform.position, new Vector2(targetPosition,-1f)) < 0.1f)
         {
@@ -175,36 +169,8 @@ public class PlayerAction : NetworkBehaviour
         }
     }
 
-    [Rpc(SendTo.Server)]
-    void TestSpawnRpc(Color color)
-    {
-        
-        // We're first instantiating the new instance in the host client
-        GameObject newGameObject = Object.Instantiate(m_circle, new Vector2(0, 0), Quaternion.identity);
-        
-        // Replicating that same new instance to all connected clients
-        NetworkObject newGameObjectNetworkObject = newGameObject.GetComponent<NetworkObject>();
-        newGameObjectNetworkObject.Spawn(true);
-    }
-
     
-
-    [Rpc(SendTo.Server)]
-    void CallCooldownServerRpc()
-    {
-       
-        IEnumerator coroutine = Countdown();
-        StartCoroutine(coroutine);
-        //CallCooldownClientRpc();
-    }
-
-    [Rpc(SendTo.ClientsAndHost)]
-    void CallCooldownClientRpc()
-    {
-        IEnumerator coroutine = Countdown();
-        StartCoroutine(coroutine);
-    }
-
+    
     void StartCooldown()
     {
         IEnumerator coroutine = Countdown();
@@ -222,17 +188,17 @@ public class PlayerAction : NetworkBehaviour
         {
             GetOutcome();
             targetPosition = returnPosition;
-            //StartMoveRpc("returning");
+            zoomDir = 5;
             status = Status.Acting;
-            //status = Status.Standby;
+            
         } else
         {
             targetPosition = 0;
             yield return new WaitForSeconds(1f);
-
+            
             StartCountdownRpc();
 
-            canAct = true;
+            status = Status.Choosing; 
         }
 
 
