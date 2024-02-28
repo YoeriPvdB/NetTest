@@ -1,0 +1,1 @@
+I am currently learning online game development with Unity's Netcode for Gameobjects. This demo has lobby functionality which then brings players to a rock, paper, scissors style game. However the game itself is buggy. I am currently attempting to fix it.
