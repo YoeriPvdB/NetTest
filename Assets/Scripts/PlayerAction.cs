@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Unity.Netcode;
 using ParrelSync;
+using UnityEngine.SceneManagement;
 
 public class PlayerAction : NetworkBehaviour
 {
@@ -58,8 +59,9 @@ public class PlayerAction : NetworkBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        gm = GameObject.FindGameObjectWithTag("GameManager").GetComponent<GameManager>();
-        gm.GetPlayer(gameObject);
+        
+        //gm = GameObject.FindGameObjectWithTag("GameManager").GetComponent<GameManager>();
+        //gm.GetPlayer(gameObject);
         uiScript = GetComponent<UIController>();
         id = (int)NetworkObjectId;
 
@@ -82,6 +84,7 @@ public class PlayerAction : NetworkBehaviour
         uiScript.EnableSlider(false);*/
 
     }
+
 
     // Update is called once per frame
     private void Update()
@@ -113,7 +116,7 @@ public class PlayerAction : NetworkBehaviour
                     uiScript.HighlightActionChoice(3);
                 }
 
-                uiScript.ShowCountdown();
+                uiScript.ShowCountdownRpc();
                 
                 break;
 
@@ -123,7 +126,7 @@ public class PlayerAction : NetworkBehaviour
                 break;
         }
 
-        if (Input.GetKeyDown(KeyCode.F) && !gaming)
+        /*if (Input.GetKeyDown(KeyCode.F) && !gaming)
         {
             targetPosition = 0;
             
@@ -131,10 +134,35 @@ public class PlayerAction : NetworkBehaviour
             gaming = true;
             //CallCooldownRpc();
             StartCountdownRpc();
-        }
+        }*/
 
          
 
+    }
+
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if(SceneManager.GetActiveScene().name == "GameScene")
+        {
+            GameStartRpc();
+        }
+    }
+
+    [Rpc(SendTo.Everyone)]
+    void GameStartRpc()
+    {
+        StartCoroutine(GameStart());
+    }
+
+    IEnumerator GameStart()
+    {
+        yield return new WaitForSeconds(5f);
+        StartCountdownRpc();
     }
 
 
@@ -146,7 +174,7 @@ public class PlayerAction : NetworkBehaviour
     }
 
     [Rpc(SendTo.Everyone)] 
-    void StartCountdownRpc()
+    public void StartCountdownRpc()
     {
         uiScript.EnableSlider(true);
         zoomDir = 3;
@@ -158,7 +186,7 @@ public class PlayerAction : NetworkBehaviour
     void MoveToOpp()
     {
        
-        transform.position = Vector2.MoveTowards(transform.position, new Vector2(targetPosition, -1f), Time.deltaTime * 60f);
+        transform.position = Vector2.MoveTowards(transform.position, new Vector2(targetPosition, -1f), Time.deltaTime * 30f);
 
         if(Vector2.Distance(transform.position, new Vector2(targetPosition,-1f)) < 0.1f)
         {
@@ -178,7 +206,7 @@ public class PlayerAction : NetworkBehaviour
     }
     IEnumerator Countdown()
     {
-        yield return new WaitForSeconds(0.5f);
+        yield return new WaitForSeconds(1f);
 
         //Debug.Log(playerChoice);
 

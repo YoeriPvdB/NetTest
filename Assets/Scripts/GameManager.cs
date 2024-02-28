@@ -22,7 +22,7 @@ public class GameManager : NetworkBehaviour
     void Start()
     {
         // GameObject.FindGameObjectWithTag("Player").GetComponent<LobbyPlayer>().SetCorrectScriptsRpc();
-        SetupRpc();
+        //SetupRpc();
 
     }
 

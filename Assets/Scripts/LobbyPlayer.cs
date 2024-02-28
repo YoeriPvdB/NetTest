@@ -11,7 +11,7 @@ public class LobbyPlayer : NetworkBehaviour
     void Start()
     {
        
-        if(!IsServer)
+        if(!IsServer && IsSpawned)
         {
             InformHostRpc();
         }
@@ -26,19 +26,20 @@ public class LobbyPlayer : NetworkBehaviour
     [Rpc(SendTo.Server)] 
     void InformHostRpc()
     {
-        Debug.Log("Player 2 is here. " + NetworkManager.ConnectedClientsList.Count);
-        NetworkManager.SceneManager.LoadScene("GameScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
-        //NetworkManager.SceneManager.OnLoadComplete
-        //LoadNewRpc();
+        Debug.Log("Player 2 is here. " + NetworkObjectId);
+        //NetworkManager.SceneManager.LoadScene("GameScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
+        NetworkManager.SceneManager.LoadScene("GameScene", LoadSceneMode.Single);
+        ChangeScriptsRpc();
         
     }
 
-    [Rpc(SendTo.NotServer)]
-    void LoadNewRpc()
+    [Rpc(SendTo.Everyone)]
+    void ChangeScriptsRpc()
     {
-        NetworkManager.SceneManager.LoadScene("GameScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
-        
+        GetComponent<PlayerScriptManager>().SetUpPlayerRpc();
     }
+
+   
 
     
 }

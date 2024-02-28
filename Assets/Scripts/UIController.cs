@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using static UnityEngine.Rendering.DebugUI;
 
@@ -10,7 +10,7 @@ using static UnityEngine.Rendering.DebugUI;
 public class UIController : MonoBehaviour
 {
     [SerializeField] Canvas canvas;
-    Slider timerSlider;
+    [SerializeField] Slider timerSlider;
     PlayerAction pAction;
     TMP_Text healthText;
     Camera cam;
@@ -25,35 +25,51 @@ public class UIController : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        Debug.Log("this is local");
-        canvas = GameObject.FindGameObjectWithTag("Canvas").GetComponent<Canvas>();
-        timerSlider = canvas.gameObject.GetComponentInChildren<Slider>();
         
         
-        healthText = GameObject.FindGameObjectWithTag("Health").GetComponent<TMP_Text>();
-        pAction = GetComponent<PlayerAction>();
-        healthText.SetText("5");
-        cam = Camera.main;
-        actionUI = GameObject.Find("ButtonInfo");
-
-        actionUIDict = new Dictionary<int, TMP_Text>()
-        {
-            { 1, actionUI.transform.GetChild(1).GetComponent<TMP_Text>() },
-            { 2, actionUI.transform.GetChild(2).GetComponent<TMP_Text>() },
-            { 3, actionUI.transform.GetChild(3).GetComponent<TMP_Text>() }
-        };
+        //Debug.Log("this is local");
+        
         //EnableSlider(false);
     }
 
-  
+    private void OnEnable()
+    {
+        
+        SceneManager.sceneLoaded += OnSceneLoaded;       
+    }
 
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (SceneManager.GetActiveScene().name == "GameScene")
+        {
+            
+            canvas = GameObject.FindGameObjectWithTag("Canvas").GetComponent<Canvas>();
+            timerSlider = canvas.gameObject.GetComponentInChildren<Slider>();
+
+
+            healthText = GameObject.FindGameObjectWithTag("Health").GetComponent<TMP_Text>();
+            pAction = GetComponent<PlayerAction>();
+            healthText.SetText("5");
+            cam = Camera.main;
+            actionUI = GameObject.Find("ButtonInfo");
+
+            actionUIDict = new Dictionary<int, TMP_Text>()
+            {
+                { 1, actionUI.transform.GetChild(1).GetComponent<TMP_Text>() },
+                { 2, actionUI.transform.GetChild(2).GetComponent<TMP_Text>() },
+                { 3, actionUI.transform.GetChild(3).GetComponent<TMP_Text>() }
+            };
+            //EnableSlider(false);
+            
+        }
+    }
     // Update is called once per frame
     void Update()
     {
         
     }
 
-    
+   
 
     public void ZoomCamera(float dir)
     {
@@ -85,7 +101,8 @@ public class UIController : MonoBehaviour
         }
     }
 
-    public void ShowCountdown()
+    
+    public void ShowCountdownRpc()
     {
         if (canvas != null)
         {
